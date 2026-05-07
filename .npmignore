@@ -1,0 +1,15 @@
+# Source — consumers use dist/
+src/
+test/
+scripts/
+
+# Config & docs
+plan.md
+tsconfig.json
+.github/
+
+# Runtime artifacts
+node_modules/
+*.log
+
+# Keep: dist/ README.md LICENSE (declared in package.json "files")
