@@ -30,12 +30,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/juanagustinacost/opencode-cursor.git"
+    "url": "git+https://github.com/agusacost/opencode-cursor.git"
   },
   "bugs": {
-    "url": "https://github.com/juanagustinacost/opencode-cursor/issues"
+    "url": "https://github.com/agusacost/opencode-cursor/issues"
   },
-  "homepage": "https://github.com/juanagustinacost/opencode-cursor#readme",
+  "homepage": "https://github.com/agusacost/opencode-cursor#readme",
   "engines": {
     "node": ">=18"
   },
