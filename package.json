@@ -1,6 +1,6 @@
 {
   "name": "@agustinacost/opencode-cursor",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "OpenCode plugin that connects Cursor models via OAuth and a local OpenAI-compatible proxy.",
   "license": "MIT",
   "type": "module",
