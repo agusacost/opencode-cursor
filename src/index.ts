@@ -5,7 +5,7 @@ import {
   pollCursorAuth,
   refreshCursorToken,
 } from "./auth.js";
-import { getCursorModels, type CursorModel } from "./models.js";
+import { getCursorModels, clearModelCache, type CursorModel } from "./models.js";
 import { startProxy } from "./proxy.js";
 
 const CURSOR_PROVIDER_ID = "cursor";
@@ -166,6 +166,8 @@ function buildCursorProviderModels(models: CursorModel[], port: number): Record<
     ]),
   );
 }
+
+export { clearModelCache };
 
 export const CursorPlugin = CursorAuthPlugin;
 

@@ -69,10 +69,11 @@ import {
 } from "./proto/agent_pb.js";
 import { createHash } from "node:crypto";
 import { resolve as pathResolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const CURSOR_API_URL = process.env.CURSOR_API_URL ?? "https://api2.cursor.sh";
 const CONNECT_END_STREAM_FLAG = 0b00000010;
-const BRIDGE_PATH = pathResolve(import.meta.dir, "h2-bridge.mjs");
+const BRIDGE_PATH = pathResolve(fileURLToPath(new URL(".", import.meta.url)), "h2-bridge.mjs");
 const SSE_HEADERS = {
  "Content-Type": "text/event-stream",
  "Cache-Control": "no-cache",
