@@ -66,7 +66,7 @@ import {
  type ExecServerMessage,
  type KvServerMessage,
  type McpToolDefinition,
-} from "./proto/agent_pb";
+} from "./proto/agent_pb.js";
 import { createHash } from "node:crypto";
 import { resolve as pathResolve } from "node:path";
 

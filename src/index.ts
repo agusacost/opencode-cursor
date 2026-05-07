@@ -4,9 +4,9 @@ import {
   getTokenExpiry,
   pollCursorAuth,
   refreshCursorToken,
-} from "./auth";
-import { getCursorModels, type CursorModel } from "./models";
-import { startProxy } from "./proxy";
+} from "./auth.js";
+import { getCursorModels, type CursorModel } from "./models.js";
+import { startProxy } from "./proxy.js";
 
 const CURSOR_PROVIDER_ID = "cursor";
 
