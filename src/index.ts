@@ -1,10 +1,4 @@
 import type { Plugin, PluginInput } from "@opencode-ai/plugin";
-import {
-  generateCursorAuthParams,
-  getTokenExpiry,
-  pollCursorAuth,
-  refreshCursorToken,
-} from "./auth.js";
 import { getCursorModels, clearModelCache, type CursorModel } from "./models.js";
 import { startProxy } from "./proxy.js";
 
@@ -17,54 +11,14 @@ export const CursorAuthPlugin: Plugin = async (input: PluginInput) => {
 
       async loader(getAuth, provider) {
         const auth = await getAuth();
-        if (!auth || auth.type !== "oauth") return {};
+        if (!auth || auth.type !== "api") return {};
 
-        let accessToken = auth.access as string | undefined;
-        const expires = auth.expires as number | undefined;
-        const refresh = auth.refresh as string | undefined;
-        if (!refresh) return {};
+        const apiKey = auth.key;
+        if (!apiKey) return {};
 
-        if (!accessToken || (typeof expires === "number" && expires < Date.now())) {
-          const refreshed = await refreshCursorToken(refresh);
-          await input.client.auth.set({
-            path: { id: CURSOR_PROVIDER_ID },
-            body: {
-              type: "oauth",
-              refresh: refreshed.refresh,
-              access: refreshed.access,
-              expires: refreshed.expires,
-            },
-          });
-          accessToken = refreshed.access;
-        }
+        const models = await getCursorModels(apiKey);
 
-        const models = await getCursorModels(accessToken);
-
-        const port = await startProxy(async () => {
-          const currentAuth = await getAuth();
-          if (!currentAuth || currentAuth.type !== "oauth") {
-            throw new Error("Cursor auth not configured");
-          }
-          const curAccess = currentAuth.access as string | undefined;
-          const curRefresh = currentAuth.refresh as string | undefined;
-          const curExpires = currentAuth.expires as number | undefined;
-          if (!curRefresh) throw new Error("Cursor refresh token missing");
-
-          if (!curAccess || (typeof curExpires === "number" && curExpires < Date.now())) {
-            const refreshed = await refreshCursorToken(curRefresh);
-            await input.client.auth.set({
-              path: { id: CURSOR_PROVIDER_ID },
-              body: {
-                type: "oauth",
-                refresh: refreshed.refresh,
-                access: refreshed.access,
-                expires: refreshed.expires,
-              },
-            });
-            return refreshed.access;
-          }
-          return curAccess;
-        }, models);
+        const port = await startProxy(async () => apiKey, models);
 
         if (provider) {
           (provider as any).models = buildCursorProviderModels(models, port);
@@ -93,25 +47,24 @@ export const CursorAuthPlugin: Plugin = async (input: PluginInput) => {
 
       methods: [
         {
-          type: "oauth",
-          label: "Login con Cursor",
-          async authorize() {
-            const { verifier, uuid, loginUrl } = await generateCursorAuthParams();
-            return {
-              url: loginUrl,
-              instructions:
-                "Completá el login en tu navegador. Esta ventana se cerrará automáticamente.",
-              method: "auto" as const,
-              async callback() {
-                const { accessToken, refreshToken } = await pollCursorAuth(uuid, verifier);
-                return {
-                  type: "success" as const,
-                  refresh: refreshToken,
-                  access: accessToken,
-                  expires: getTokenExpiry(accessToken),
-                };
+          type: "api",
+          label: "Cursor API Key",
+          prompts: [
+            {
+              type: "text",
+              key: "key",
+              message: "Pegá tu Cursor API Key",
+              placeholder: "cursor_...",
+              validate(value: string) {
+                if (!value || !value.trim()) return "La API key no puede estar vacía";
+                return undefined;
               },
-            };
+            },
+          ],
+          async authorize(inputs?: Record<string, string>) {
+            const key = inputs?.key?.trim() ?? "";
+            if (!key) return { type: "failed" as const };
+            return { type: "success" as const, key };
           },
         },
       ],
@@ -174,4 +127,3 @@ export const CursorPlugin = CursorAuthPlugin;
 // OpenCode plugin entrypoint expects a `server` export (PluginModule.server).
 export const server = CursorAuthPlugin;
 export default CursorAuthPlugin;
-

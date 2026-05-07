@@ -20,6 +20,8 @@ interface TestModules {
   clearModelCache: typeof import("../src/models").clearModelCache;
 }
 
+type ApiAuthState = { type: "api"; key: string };
+
 interface TestCursorBackend {
   apiUrl: string;
   refreshUrl: string;
@@ -354,10 +356,10 @@ async function testPluginShape(modules: TestModules) {
   if (!Array.isArray(hooks.auth.methods) || hooks.auth.methods.length === 0) {
     throw new Error("Plugin hooks.auth.methods missing or empty");
   }
-  if (hooks.auth.methods[0].type !== "oauth") {
-    throw new Error(`Expected method type 'oauth', got '${hooks.auth.methods[0].type}'`);
+  if (hooks.auth.methods[0].type !== "api") {
+    throw new Error(`Expected method type 'api', got '${hooks.auth.methods[0].type}'`);
   }
-  if (typeof hooks.auth.methods[0].authorize !== "function") {
+  if (typeof (hooks.auth.methods[0] as any).authorize !== "function") {
     throw new Error("Plugin auth method missing authorize function");
   }
 
@@ -404,52 +406,28 @@ async function testArrayContentParsing(modules: TestModules) {
   console.log("[test] Array content parsing OK");
 }
 
-async function testExpiredTokenRefreshBeforeDiscovery(
+async function testApiKeyDiscovery(
   modules: TestModules,
   backend: TestCursorBackend,
 ) {
-  console.log("[test] Testing refresh-before-discovery...");
+  console.log("[test] Testing API key discovery...");
   modules.clearModelCache();
   backend.resetObservations();
   backend.setDiscoveryMode("success");
   backend.setDiscoveredModels([{ id: "fresh-model", name: "Fresh Model", reasoning: true }]);
 
-  let authState = {
-    type: "oauth" as const,
-    access: "expired-access",
-    refresh: "valid-refresh",
-    expires: Date.now() - 10_000,
-  };
-  const writes: Array<{ access: string; refresh: string; expires: number }> = [];
+  const authState: ApiAuthState = { type: "api", key: "my-cursor-api-key" };
   const hooks = await modules.CursorAuthPlugin({
-    client: {
-      auth: {
-        set: async ({ body }: any) => {
-          writes.push(body);
-          authState = body;
-        },
-      },
-    },
+    client: { auth: { set: async () => {} } },
   } as any);
   const provider = { models: {} as Record<string, unknown> } as any;
 
   await hooks.auth!.loader(async () => authState, provider);
 
-  assertEqual(writes.length, 1, "Expected refreshed auth to be persisted once");
-  assert(
-    writes[0]?.access && writes[0].access !== "expired-access",
-    "Expected refreshed access token to replace the expired token",
-  );
   assertArrayEqual(
-    backend.getRefreshAuthHeaders(),
-    ["Bearer valid-refresh"],
-    "Expected refresh endpoint to be called with the stored refresh token",
-  );
-  assert(
-    backend
-      .getDiscoveryAuthHeaders()
-      .every((header) => header === `Bearer ${writes[0]?.access}`),
-    `Expected discovery to use the refreshed token, got ${JSON.stringify(backend.getDiscoveryAuthHeaders())}`,
+    backend.getDiscoveryAuthHeaders(),
+    ["Bearer my-cursor-api-key"],
+    "Expected discovery to use the API key as Bearer token",
   );
   assertArrayEqual(
     Object.keys(provider.models),
@@ -458,24 +436,15 @@ async function testExpiredTokenRefreshBeforeDiscovery(
   );
 
   modules.stopProxy();
-  console.log("[test] Refresh-before-discovery OK");
+  console.log("[test] API key discovery OK");
 }
 
 async function testDiscoveryFallbackAndSuccess(modules: TestModules, backend: TestCursorBackend) {
   console.log("[test] Testing discovery fallback and success...");
 
-  const authState = {
-    type: "oauth" as const,
-    access: makeJwt(Math.floor(Date.now() / 1000) + 3600),
-    refresh: "valid-refresh",
-    expires: Date.now() + 3_600_000,
-  };
+  const authState: ApiAuthState = { type: "api", key: "my-cursor-api-key" };
   const hooks = await modules.CursorAuthPlugin({
-    client: {
-      auth: {
-        set: async () => {},
-      },
-    },
+    client: { auth: { set: async () => {} } },
   } as any);
   const provider = { models: { stale: { id: "stale" } } } as any;
 
@@ -532,7 +501,7 @@ async function main() {
     await testTokenExpiry(modules);
     await testPluginShape(modules);
     await testArrayContentParsing(modules);
-    await testExpiredTokenRefreshBeforeDiscovery(modules, backend);
+    await testApiKeyDiscovery(modules, backend);
     await testDiscoveryFallbackAndSuccess(modules, backend);
     console.log("\n✓ All smoke tests passed");
     process.exitCode = 0;
