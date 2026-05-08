@@ -356,10 +356,10 @@ async function testPluginShape(modules: TestModules) {
   if (!Array.isArray(hooks.auth.methods) || hooks.auth.methods.length === 0) {
     throw new Error("Plugin hooks.auth.methods missing or empty");
   }
-  if (hooks.auth.methods[0].type !== "api") {
-    throw new Error(`Expected method type 'api', got '${hooks.auth.methods[0].type}'`);
+  if (hooks.auth.methods[0].type !== "oauth") {
+    throw new Error(`Expected method type 'oauth', got '${hooks.auth.methods[0].type}'`);
   }
-  if (typeof (hooks.auth.methods[0] as any).authorize !== "function") {
+  if (typeof hooks.auth.methods[0].authorize !== "function") {
     throw new Error("Plugin auth method missing authorize function");
   }
 

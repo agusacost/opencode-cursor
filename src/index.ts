@@ -47,24 +47,20 @@ export const CursorAuthPlugin: Plugin = async (input: PluginInput) => {
 
       methods: [
         {
-          type: "api",
+          type: "oauth",
           label: "Cursor API Key",
-          prompts: [
-            {
-              type: "text",
-              key: "key",
-              message: "Pegá tu Cursor API Key",
-              placeholder: "cursor_...",
-              validate(value: string) {
-                if (!value || !value.trim()) return "La API key no puede estar vacía";
-                return undefined;
+          async authorize() {
+            return {
+              url: "https://www.cursor.com/settings",
+              instructions:
+                "1. Abrí cursor.com/settings en el navegador\n2. Copiá tu API key\n3. Pegala en el campo de código de abajo",
+              method: "code" as const,
+              async callback(code: string) {
+                const key = code.trim();
+                if (!key) return { type: "failed" as const };
+                return { type: "success" as const, key };
               },
-            },
-          ],
-          async authorize(inputs?: Record<string, string>) {
-            const key = inputs?.key?.trim() ?? "";
-            if (!key) return { type: "failed" as const };
-            return { type: "success" as const, key };
+            };
           },
         },
       ],
